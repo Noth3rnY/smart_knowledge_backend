@@ -1,0 +1,932 @@
+{
+  "info": {
+    "name": "SmartKnowledgeDB 完整课程演示",
+    "description": "先启动 demo 环境，然后按顺序执行。变量持久化支持幂等演示；重新运行整套时清空 username 及 accessToken，预请求脚本将生成新账号与 UUID。密码和令牌仅保存在个人 Postman 变量中，不要导出含真实值的集合。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deviceA",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "deviceB",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "noteId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activationRequest",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "syncRequest",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflictRequest",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "aiRequest",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conflictId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "backupId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "versionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "restoredNoteId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get(\"username\")) {",
+          "  pm.collectionVariables.set(\"username\",\"demo_\"+pm.variables.replaceIn(\"{{$guid}}\").replace(/-/g,\"\").slice(0,16));",
+          "  pm.collectionVariables.set(\"password\",\"Demo!\"+pm.variables.replaceIn(\"{{$guid}}\"));",
+          "  [\"deviceA\",\"deviceB\",\"noteId\",\"activationRequest\",\"syncRequest\",\"conflictRequest\",\"aiRequest\"].forEach(k => pm.collectionVariables.set(k,pm.variables.replaceIn(\"{{$guid}}\")));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 注册账号",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"nickname\": \"课程演示用户\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 设备 A 登录",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"deviceUuid\": \"{{deviceA}}\",\n  \"deviceName\": \"手机\",\n  \"platform\": \"android\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const d=pm.response.json().data; pm.collectionVariables.set(\"accessToken\",d.accessToken); pm.collectionVariables.set(\"refreshToken\",d.refreshToken); pm.collectionVariables.set(\"sessionA\",d.deviceId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 查看套餐",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/plans",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 模拟开通（demo 环境）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/subscriptions/demo-activate",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requestId\": \"{{activationRequest}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 查询说明与资料",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 明确授权三项云服务",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/me/preferences",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"syncEnabled\": true,\n  \"backupEnabled\": true,\n  \"aiEnabled\": true,\n  \"consentVersion\": \"2026-10-v1\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 设备 A 推送新笔记",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sync/push",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceUuid\": \"{{deviceA}}\",\n  \"requestId\": \"{{syncRequest}}\",\n  \"changes\": [\n    {\n      \"operation\": \"upsert\",\n      \"note\": {\n        \"id\": \"{{noteId}}\",\n        \"baseVersion\": 0,\n        \"title\": \"Flutter 界面渲染与掉帧优化\",\n        \"content\": \"# 性能笔记\\n减少无效重建，优化 SQL 查询。\",\n        \"tags\": [\n          {\n            \"name\": \"Flutter\",\n            \"source\": \"manual\"\n          }\n        ]\n      }\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 相同请求重试（不重复写入）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sync/push",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceUuid\": \"{{deviceA}}\",\n  \"requestId\": \"{{syncRequest}}\",\n  \"changes\": [\n    {\n      \"operation\": \"upsert\",\n      \"note\": {\n        \"id\": \"{{noteId}}\",\n        \"baseVersion\": 0,\n        \"title\": \"Flutter 界面渲染与掉帧优化\",\n        \"content\": \"# 性能笔记\\n减少无效重建，优化 SQL 查询。\",\n        \"tags\": [\n          {\n            \"name\": \"Flutter\",\n            \"source\": \"manual\"\n          }\n        ]\n      }\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 设备 B 登录",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"deviceUuid\": \"{{deviceB}}\",\n  \"deviceName\": \"电脑\",\n  \"platform\": \"desktop\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const d=pm.response.json().data; pm.collectionVariables.set(\"tokenA\",pm.collectionVariables.get(\"accessToken\")); pm.collectionVariables.set(\"accessToken\",d.accessToken); pm.collectionVariables.set(\"refreshToken\",d.refreshToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 第二设备增量拉取",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/sync/pull?after=0&size=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 更新云端到版本 2",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/notes/{{noteId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{noteId}}\",\n  \"baseVersion\": 1,\n  \"title\": \"Flutter 界面渲染与掉帧优化\",\n  \"content\": \"云端第二稿\",\n  \"tags\": [\n    {\n      \"name\": \"Flutter\",\n      \"source\": \"manual\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 提交基础版本 1 的离线稿",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sync/push",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceUuid\": \"{{deviceB}}\",\n  \"requestId\": \"{{conflictRequest}}\",\n  \"changes\": [\n    {\n      \"operation\": \"upsert\",\n      \"note\": {\n        \"id\": \"{{noteId}}\",\n        \"baseVersion\": 1,\n        \"title\": \"Flutter 界面渲染与掉帧优化\",\n        \"content\": \"第二设备离线稿\",\n        \"tags\": [\n          {\n            \"name\": \"Flutter\",\n            \"source\": \"manual\"\n          }\n        ]\n      }\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set(\"conflictId\",pm.response.json().data.results[0].conflictId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 查看双方冲突快照",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/sync/conflicts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 选择离线稿（产生版本 3）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/sync/conflicts/{{conflictId}}/resolve",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serverVersion\": 2,\n  \"choice\": \"submitted\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 关键词与标签筛选",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/notes?keyword=Flutter&tags=Flutter&page=1&size=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 查看标签字典",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/tags"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 创建备份",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/backups",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"课程演示备份\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set(\"backupId\",pm.response.json().data.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 查看备份列表",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/backups"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 下载完整备份",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/backups/{{backupId}}/download"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 恢复为新笔记",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/backups/{{backupId}}/restore"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set(\"restoredNoteId\",pm.response.json().data.notes[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 查询历史快照",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/notes/{{noteId}}/versions"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const rows=pm.response.json().data.items; pm.collectionVariables.set(\"versionId\",rows[rows.length-1].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 恢复最早历史（产生版本 4）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/notes/{{noteId}}/versions/{{versionId}}/restore",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"baseVersion\": 3\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 生成建议标签",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/ai/tags",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requestId\": \"{{aiRequest}}\",\n  \"title\": \"Flutter SQL 性能优化\",\n  \"content\": \"减少无效重建并检查数据库查询。\",\n  \"existingTags\": [\n    \"Flutter\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "24 重放 AI 请求（只扣一次）",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/ai/tags",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requestId\": \"{{aiRequest}}\",\n  \"title\": \"Flutter SQL 性能优化\",\n  \"content\": \"减少无效重建并检查数据库查询。\",\n  \"existingTags\": [\n    \"Flutter\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "25 查询订阅和用量",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/subscriptions/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "26 删除原笔记（版本 5）",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/notes/{{noteId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"baseVersion\": 4\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "27 查看设备",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/devices"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "28 刷新当前设备令牌",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/api/v1/auth/refresh",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));",
+              "const d=pm.response.json().data; pm.collectionVariables.set(\"accessToken\",d.accessToken); pm.collectionVariables.set(\"refreshToken\",d.refreshToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "29 删除备份",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/backups/{{backupId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "30 退出当前设备",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": "{{baseUrl}}/api/v1/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP 200\", () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

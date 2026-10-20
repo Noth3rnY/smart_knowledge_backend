@@ -1,0 +1,50 @@
+server:
+  port: ${PORT:8080}
+spring:
+  application:
+    name: smart-knowledge-backend
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/smart_knowledge_db?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8}
+    username: ${DB_USERNAME:smartknowledge}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+  jackson:
+    time-zone: UTC
+    deserialization:
+      fail-on-unknown-properties: true
+  flyway:
+    enabled: true
+  mvc:
+    problemdetails:
+      enabled: false
+mybatis-plus:
+  global-config:
+    banner: false
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+app:
+  access-ttl-minutes: 30
+  refresh-ttl-days: 30
+  body-max-bytes: ${NOTE_MAX_BYTES:262144}
+  backup-retention-days: ${BACKUP_RETENTION_DAYS:30}
+  backup-max-count: ${BACKUP_MAX_COUNT:10}
+  cors-origins: ${CORS_ORIGINS:http://localhost:3000}
+  ai:
+    mode: ${AI_MODE:real}
+    base-url: ${AI_BASE_URL:}
+    model: ${AI_MODEL:}
+    api-key: ${AI_API_KEY:}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:30}
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
